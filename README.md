@@ -1,1 +1,2 @@
-# chainshot-work
+# Repo for turning in chainshot assignments
+
