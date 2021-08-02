@@ -1,0 +1,155 @@
+import type { Provider as EthersProvider } from "@ethersproject/providers";
+import type { Signer as EthersSigner } from "ethers";
+import { Web3Provider } from "@ethersproject/providers";
+
+import { derived, writable, Writable, Readable } from "svelte/store";
+
+const METAMASK_KEY = "metamask";
+interface Provider {
+  name: String;
+  driver: EthersProvider;
+}
+
+interface Signer {
+  name: String;
+  driver: EthersSigner;
+}
+
+export default class Account {
+  // reactive
+  private _current: Writable<String>;
+  private _registeredProviders: Writable<String[]>;
+  private _providerErrors: Writable<Error[]>;
+  private _signerErrors: Writable<Error[]>;
+
+  // not reactive
+  private providers: Provider[];
+  private signers: Signer[];
+
+  // derivations
+  public customRegisteredProviders: Readable<String[]>;
+  public isCustomRpc: Readable<Boolean>;
+  public isMetamasked: Readable<Boolean>;
+
+  private _currentMetamaskAddress: Readable<String>;
+
+  constructor() {
+    this._current = writable("");
+    this._registeredProviders = writable([]);
+    this._providerErrors = writable([]);
+    this._signerErrors = writable([]);
+
+    this.providers = [];
+    this.signers = [];
+
+    this.customRegisteredProviders = derived(this._registeredProviders, providers => {
+      return providers.filter(p => p !== METAMASK_KEY);
+    });
+    this.isCustomRpc = derived(this.customRegisteredProviders, providers => {
+      return providers.length > 0;
+    });
+    this.isMetamasked = derived(this._registeredProviders, providers => {
+      return providers.includes(METAMASK_KEY);
+    });
+
+    this._currentMetamaskAddress = derived([this._current, this.isMetamasked], ([cur, enabled]) => {
+      if (cur === METAMASK_KEY && enabled) {
+      } else {
+        return "";
+      }
+    });
+  }
+
+  get current() {
+    return this._current;
+  }
+
+  //not reactive
+  get registeredProviders() {
+    return this._registeredProviders;
+  }
+
+  get metamaskAddress() {
+    return this._currentMetamaskAddress;
+  }
+
+  public addMetamaskProvider(provider: EthersProvider): Boolean {
+    return this.addProvider(METAMASK_KEY, provider);
+  }
+
+  public async addMetamaskConnection() {
+    if (!window.hasOwnProperty("ethereum")) {
+      this._providerErrors.update(items => {
+        let e = new Error("No Metamask provider found in browser");
+        items.push(e);
+        console.error(e);
+        return items;
+      });
+    } else if (this.hasProvider(METAMASK_KEY)) {
+      this._providerErrors.update(items => {
+        let e = new Error("Metamask provider already exists");
+        items.push(e);
+        console.error(e);
+        return items;
+      });
+    } else {
+      const provider = new Web3Provider(window["ethereum"]);
+      console.log("Adding metamask provider");
+      this.addMetamaskProvider(provider);
+    }
+  }
+
+  public async removeMetamaskConnection() {
+    return this.removeProvider(METAMASK_KEY);
+  }
+  // not reactive
+  public addProvider(name: String, provider: EthersProvider): Boolean {
+    if (this.hasProvider(name)) {
+      let index = this.providers.findIndex(p => name === p.name);
+      this.providers.splice(index, 1, { name: name, driver: provider });
+      this._registeredProviders.update(items => {
+        items.splice(index, 1, name);
+        return items;
+      });
+    } else {
+      this.providers.push({ name: name, driver: provider });
+      console.log("Updating _registeredProviders");
+      this._registeredProviders.update(items => {
+        items.push(name);
+        return items;
+      });
+      console.log(this._registeredProviders);
+      console.log(this.isMetamasked);
+    }
+    return true;
+  }
+  public removeProvider(name: String): Boolean {
+    if (!this.hasProvider(name)) {
+      let e = new Error("No Provider registered for " + name);
+      console.error(e);
+      this._providerErrors.update(items => {
+        items.push(e);
+        return items;
+      });
+      return false;
+    } else {
+      this.providers = this.providers.filter(p => p.name !== name);
+      this._registeredProviders.update(items => {
+        items = items.filter(p => name !== name);
+        return items;
+      });
+    }
+  }
+
+  private hasCustomProvider(): Boolean {
+    return Boolean(this.providers.find(p => p.name !== METAMASK_KEY));
+  }
+
+  private hasProvider(name: String): Boolean {
+    return Boolean(this.providers.find(p => p.name === name));
+  }
+  private hasSigner(name: String): Boolean {
+    return Boolean(this.signers.find(p => p.name === name));
+  }
+}
+// https://javascript.plainenglish.io/writing-a-svelte-store-with-typescript-22fa1c901a4
