@@ -12,9 +12,9 @@
     "lint:fix": "eslint --fix ./src/**/*.{svelte,ts,js} --ignore-path .gitignore ."
   },
   "devDependencies": {
+    "@ethersproject/providers": "^5.4.3",
     "@sveltejs/adapter-static": "next",
     "@sveltejs/kit": "next",
-    "@sveltejs/vite-plugin-svelte": "^1.0.0-next.15",
     "@typescript-eslint/eslint-plugin": "^4.19.0",
     "@typescript-eslint/parser": "^4.19.0",
     "autoprefixer": "^10.2.6",
@@ -23,6 +23,7 @@
     "eslint": "^7.22.0",
     "eslint-config-prettier": "^8.1.0",
     "eslint-plugin-svelte3": "^3.2.0",
+    "ethers": "^5.4.3",
     "postcss": "^8.3.0",
     "postcss-load-config": "^3.0.1",
     "postcss-nested": "^5.0.5",
@@ -35,8 +36,5 @@
     "tslib": "^2.0.0",
     "typescript": "^4.0.0"
   },
-  "type": "module",
-  "dependencies": {
-    "ethers": "^5.4.3"
-  }
+  "type": "module"
 }
